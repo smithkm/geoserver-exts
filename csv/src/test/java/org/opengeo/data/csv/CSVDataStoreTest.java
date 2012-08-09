@@ -22,65 +22,67 @@ import com.vividsolutions.jts.geom.Point;
 
 public class CSVDataStoreTest {
 
-    private CSVDataStore csvDataStore;
+private CSVDataStore csvDataStore;
 
-    @Before
-    public void setUp() throws IOException {
-        URL resource = CSVDataStoreFactory.class.getResource("locations.csv");
-        assertNotNull("Failure finding locations csv file", resource);
-        File file = new File(resource.getFile());
-        csvDataStore = new CSVDataStore(file);
-    }
+@Before
+public void setUp() throws IOException {
+    URL resource = CSVDataStoreFactory.class.getResource("locations.csv");
+    assertNotNull("Failure finding locations csv file", resource);
+    File file = new File(resource.getFile());
+    csvDataStore = new CSVDataStore(file,
+            CSVDataStore.StrategyType.GUESS_GEOMETRY_FROM_LATLNG);
+}
 
-    @Test
-    public void testGetTypeName() {
-        Name typeName = csvDataStore.getTypeName();
-        assertEquals("Invalid type name", "locations", typeName.getLocalPart());
-    }
+@Test
+public void testGetTypeName() {
+    Name typeName = csvDataStore.getTypeName();
+    assertEquals("Invalid type name", "locations", typeName.getLocalPart());
+}
 
-    private List<Coordinate> makeExpectedCoordinates(double... points) {
-        List<Coordinate> result = new ArrayList<Coordinate>(points.length);
-        double x = -1;
-        for (double d : points) {
-            if (x == -1) {
-                x = d;
-            } else {
-                Coordinate coordinate = new Coordinate(d, x);
-                x = -1;
-                result.add(coordinate);
-            }
+private List<Coordinate> makeExpectedCoordinates(double... points) {
+    List<Coordinate> result = new ArrayList<Coordinate>(points.length);
+    double x = -1;
+    for (double d : points) {
+        if (x == -1) {
+            x = d;
+        } else {
+            Coordinate coordinate = new Coordinate(d, x);
+            x = -1;
+            result.add(coordinate);
         }
-        return result;
+    }
+    return result;
+}
+
+@Test
+public void testReadFeatures() throws IOException {
+    FeatureReader<SimpleFeatureType, SimpleFeature> reader = csvDataStore
+            .getFeatureReader();
+    List<Coordinate> geometries = new ArrayList<Coordinate>();
+    List<String> cities = new ArrayList<String>();
+    List<String> numbers = new ArrayList<String>();
+
+    while (reader.hasNext()) {
+        SimpleFeature feature = reader.next();
+        Point geometry = (Point) feature.getDefaultGeometry();
+        geometries.add(geometry.getCoordinate());
+        cities.add(feature.getAttribute("CITY").toString());
+        numbers.add(feature.getAttribute("NUMBER").toString());
     }
 
-    @Test
-    public void testReadFeatures() throws IOException {
-        FeatureReader<SimpleFeatureType, SimpleFeature> reader = csvDataStore.getFeatureReader();
-        List<Coordinate> geometries = new ArrayList<Coordinate>();
-        List<String> cities = new ArrayList<String>();
-        List<String> numbers = new ArrayList<String>();
+    List<Coordinate> expectedCoordinates = makeExpectedCoordinates(46.066667,
+            11.116667, 44.9441, -93.0852, 13.752222, 100.493889, 45.420833,
+            -75.69, 44.9801, -93.251867, 46.519833, 6.6335, 48.428611,
+            -123.365556, -33.925278, 18.423889, -33.859972, 151.211111);
+    assertEquals("Unexpected coordinates", expectedCoordinates, geometries);
 
-        while (reader.hasNext()) {
-            SimpleFeature feature = reader.next();
-            Point geometry = (Point) feature.getDefaultGeometry();
-            geometries.add(geometry.getCoordinate());
-            cities.add(feature.getAttribute("CITY").toString());
-            numbers.add(feature.getAttribute("NUMBER").toString());
-        }
+    List<String> expectedCities = Arrays
+            .asList("Trento, St Paul, Bangkok, Ottawa, Minneapolis, Lausanne, Victoria, Cape Town, Sydney"
+                    .split(", "));
+    assertEquals("Unexecpted cities", expectedCities, cities);
 
-        List<Coordinate> expectedCoordinates = makeExpectedCoordinates(46.066667, 11.116667,
-                44.9441, -93.0852, 13.752222, 100.493889, 45.420833, -75.69, 44.9801, -93.251867,
-                46.519833, 6.6335, 48.428611, -123.365556, -33.925278, 18.423889, -33.859972,
-                151.211111);
-        assertEquals("Unexpected coordinates", expectedCoordinates, geometries);
-
-        List<String> expectedCities = Arrays
-                .asList("Trento, St Paul, Bangkok, Ottawa, Minneapolis, Lausanne, Victoria, Cape Town, Sydney"
-                        .split(", "));
-        assertEquals("Unexecpted cities", expectedCities, cities);
-
-        List<String> expectedNumbers = Arrays.asList("140, 125, 150, 200, 350, 560, 721, 550, 436"
-                .split(", "));
-        assertEquals("Unexpected numbers", expectedNumbers, numbers);
-    }
+    List<String> expectedNumbers = Arrays
+            .asList("140, 125, 150, 200, 350, 560, 721, 550, 436".split(", "));
+    assertEquals("Unexpected numbers", expectedNumbers, numbers);
+}
 }

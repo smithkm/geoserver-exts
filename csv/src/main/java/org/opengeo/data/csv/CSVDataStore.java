@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.commons.io.FilenameUtils;
 import org.geotools.data.FeatureReader;
@@ -42,17 +43,21 @@ public class CSVDataStore extends ContentDataStore implements FileDataStore {
     }
 
     public static enum StrategyType {
-        ONLY_ATTRIBUTES, GEOMETRY_FROM_LATLNG
+        ONLY_ATTRIBUTES, GUESS_GEOMETRY_FROM_LATLNG, SPECIFIED_LATLNG
     }
 
     public CSVDataStore(File file) throws IOException {
-        this(file, null);
+        this(file, StrategyType.ONLY_ATTRIBUTES);
     }
 
     public CSVDataStore(File file, URI namespace) throws IOException {
-        this(file, namespace, StrategyType.GEOMETRY_FROM_LATLNG);
+        this(file, namespace, StrategyType.ONLY_ATTRIBUTES);
     }
-
+    
+    public CSVDataStore(File file, StrategyType strategyType) throws IOException {
+        this(file, null, strategyType);
+    }
+    
     public CSVDataStore(File file, URI namespace, StrategyType strategyType) throws IOException {
         this(file, namespace, strategyType, new CSVFileState(file,
                 getTypeName(file).getLocalPart(), crs, namespace));
@@ -72,11 +77,21 @@ public class CSVDataStore extends ContentDataStore implements FileDataStore {
 
     public CSVDataStore(File file, URI namespace, StrategyType strategyType,
             CSVFileState csvFileState) throws IOException {
-        this(file, namespace, createStrategyFactory(strategyType, csvFileState));
+        this(file, namespace, createStrategyFactory(strategyType, csvFileState, null));
     }
 
     private static CSVStrategyFactory createStrategyFactory(StrategyType strategyType,
-            CSVFileState csvFileState) {
+            CSVFileState csvFileState, Map<String, Object> strategyData) {
+        switch (strategyType) {
+        case ONLY_ATTRIBUTES:
+            return new CSVAttributesOnlyStrategyFactory(csvFileState);
+        case GUESS_GEOMETRY_FROM_LATLNG:
+            return new CSVLatLonStrategyFactory(csvFileState);
+        case SPECIFIED_LATLNG:
+            String lat = strategyData.get("lat").toString();
+            String lng = strategyData.get("lng").toString();
+            return new CSVSpecifiedLatLngStrategyFactory(csvFileState, lat, lng);
+        }
         return StrategyType.ONLY_ATTRIBUTES.equals(strategyType) ? new CSVAttributesOnlyStrategyFactory(
                 csvFileState) : new CSVLatLonStrategyFactory(csvFileState);
     }

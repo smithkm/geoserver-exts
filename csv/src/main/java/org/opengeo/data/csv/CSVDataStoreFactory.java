@@ -93,7 +93,7 @@ public class CSVDataStoreFactory implements FileDataStoreFactorySpi {
     }
 
     public FileDataStore createDataStoreFromFile(File file) throws IOException {
-        return createDataStoreFromFile(file, null, StrategyType.GEOMETRY_FROM_LATLNG);
+        return createDataStoreFromFile(file, null, StrategyType.ONLY_ATTRIBUTES);
     }
 
     public FileDataStore createDataStoreFromFile(File file, URI namespace, StrategyType strategyType)
@@ -111,7 +111,7 @@ public class CSVDataStoreFactory implements FileDataStoreFactorySpi {
         File file = fileFromParams(params);
         URI namespace = (URI) NAMESPACEP.lookUp(params);
         Object context = CONTEXT_PARAM.lookUp(params);
-        StrategyType strategyType = StrategyType.GEOMETRY_FROM_LATLNG;
+        StrategyType strategyType = StrategyType.ONLY_ATTRIBUTES;
         if (context != null) {
             String contextValue = context.toString();
             if (contextValue.equalsIgnoreCase("importer")) {
