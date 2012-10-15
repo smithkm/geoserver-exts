@@ -136,6 +136,7 @@ public class RequestMapInitializer implements GeoServerInitializer {
         }
         
         ft = cat.getFeatureTypeByDataStore(ds, "requests");
+        
         if (ft == null) {
             ft = cat.getFactory().createFeatureType();
             ft.setName("requests");
@@ -145,8 +146,26 @@ public class RequestMapInitializer implements GeoServerInitializer {
             ft.setEnabled(true);
             setWorldBounds(ft);
             
-            VirtualTable vt = new VirtualTable("requests", 
-                "SELECT ST_SetSRID(ST_MakePoint(remote_lon,remote_lat), 4326) as \"point\"," +
+            
+            ft.getMetadata().put("JDBC_VIRTUAL_TABLE", createRequestsVirtualTable());
+            cat.add(ft);
+        } else {
+            // check for updates - prior to 3.1, the geometry field wasn't set correctly due to 
+            // mismatched letter case
+            if(!ft.getFeatureType().getGeometryDescriptor().getLocalName().equals("POINT")){
+                ft.getMetadata().put("JDBC_VIRTUAL_TABLE", createRequestsVirtualTable());
+            }
+            cat.save(ft);
+        }
+        
+        if (cat.getLayers(ft).isEmpty()) {
+            addLayer(cat, ft, "point");
+        }
+    }
+    
+    VirtualTable createRequestsVirtualTable() {
+        VirtualTable vt = new VirtualTable("requests", 
+                "SELECT ST_SetSRID(ST_MakePoint(remote_lon,remote_lat), 4326) as \"POINT\"," +
                        "id as \"ID\", " +
                        "id as \"REQUEST_ID\", " +
                        "status as \"STATUS\", " +
@@ -174,16 +193,10 @@ public class RequestMapInitializer implements GeoServerInitializer {
                        "error_message as \"ERROR_MESSAGE\"" + 
                  " FROM request");
             
-            vt.addGeometryMetadatata("POINT", Point.class, 4326);
-            vt.setPrimaryKeyColumns(Arrays.asList("ID"));
-            
-            ft.getMetadata().put("JDBC_VIRTUAL_TABLE", vt);
-            cat.add(ft);
-        }
+        vt.addGeometryMetadatata("POINT", Point.class, 4326);
+        vt.setPrimaryKeyColumns(Arrays.asList("ID"));
         
-        if (cat.getLayers(ft).isEmpty()) {
-            addLayer(cat, ft, "point");
-        }
+        return vt;
     }
     
     VirtualTable createAggRequestsVirtualTable() {
