@@ -31,6 +31,8 @@ import org.geotools.util.logging.Logging;
 import org.opengis.referencing.crs.CoordinateReferenceSystem;
 
 import com.vividsolutions.jts.geom.Point;
+import com.vividsolutions.jts.geom.Polygon;
+
 import org.geotools.jdbc.RegexpValidator;
 import org.geotools.jdbc.VirtualTableParameter;
 
@@ -161,11 +163,31 @@ public class RequestMapInitializer implements GeoServerInitializer {
         if (cat.getLayers(ft).isEmpty()) {
             addLayer(cat, ft, "point");
         }
+        
+        ft = cat.getFeatureTypeByDataStore(ds, "requests_box");
+        
+        if (ft == null) {
+            ft = cat.getFactory().createFeatureType();
+            ft.setName("requests_box");
+            ft.setNativeName("requests_box");
+            ft.setNamespace(cat.getNamespaceByPrefix(ws.getName()));
+            ft.setStore(ds);
+            ft.setEnabled(true);
+            setWorldBounds(ft);
+            
+            
+            ft.getMetadata().put("JDBC_VIRTUAL_TABLE", createRequestsBoxesVirtualTable());
+            cat.add(ft);
+        }
+        
+        if (cat.getLayers(ft).isEmpty()) {
+            addLayer(cat, ft, "polygon");
+        }
     }
     
-    VirtualTable createRequestsVirtualTable() {
-        VirtualTable vt = new VirtualTable("requests", 
-                "SELECT ST_SetSRID(ST_MakePoint(remote_lon,remote_lat), 4326) as \"POINT\"," +
+    VirtualTable createVirtualTable(String name, String geometryDefn) {
+        VirtualTable vt = new VirtualTable(name, 
+                "SELECT "+geometryDefn+"," +
                        "id as \"ID\", " +
                        "id as \"REQUEST_ID\", " +
                        "status as \"STATUS\", " +
@@ -192,10 +214,18 @@ public class RequestMapInitializer implements GeoServerInitializer {
                        "response_length as \"RESPONSE_LENGTH\", " +
                        "error_message as \"ERROR_MESSAGE\"" + 
                  " FROM request");
-            
-        vt.addGeometryMetadatata("POINT", Point.class, 4326);
         vt.setPrimaryKeyColumns(Arrays.asList("ID"));
-        
+        return vt;
+    }
+    
+    VirtualTable createRequestsVirtualTable() {
+        VirtualTable vt = createVirtualTable("requests", "ST_SetSRID(ST_MakePoint(remote_lon,remote_lat), 4326) as \"POINT\"");
+        vt.addGeometryMetadatata("POINT", Point.class, 4326);
+        return vt;
+    }
+    VirtualTable createRequestsBoxesVirtualTable() {
+        VirtualTable vt = createVirtualTable("requests_box", "ST_SetSRID(ST_MakeBox2D(ST_Point(minx, miny),ST_Point(maxx,maxy)),4326) as \"BOX\"");
+        vt.addGeometryMetadatata("BOX", Polygon.class, 4326);
         return vt;
     }
     
