@@ -185,7 +185,7 @@ public class RequestMapInitializer implements GeoServerInitializer {
         }
     }
     
-    VirtualTable createVirtualTable(String name, String geometryDefn) {
+    VirtualTable createVirtualTable(String name, String geometryDefn, String query) {
         VirtualTable vt = new VirtualTable(name, 
                 "SELECT "+geometryDefn+"," +
                        "id as \"ID\", " +
@@ -213,18 +213,21 @@ public class RequestMapInitializer implements GeoServerInitializer {
                        "content_type as \"CONTENT_TYPE\", " +
                        "response_length as \"RESPONSE_LENGTH\", " +
                        "error_message as \"ERROR_MESSAGE\"" + 
-                 " FROM request");
+                 " FROM request" +
+                 " WHERE "+query +" AND %query%");
         vt.setPrimaryKeyColumns(Arrays.asList("ID"));
+        RegexpValidator validator = new RegexpValidator(START_END_REGEXP);
+        vt.addParameter(new VirtualTableParameter("query","1=1",validator));
         return vt;
     }
     
     VirtualTable createRequestsVirtualTable() {
-        VirtualTable vt = createVirtualTable("requests", "ST_SetSRID(ST_MakePoint(remote_lon,remote_lat), 4326) as \"POINT\"");
+        VirtualTable vt = createVirtualTable("requests", "ST_SetSRID(ST_MakePoint(remote_lon,remote_lat), 4326) as \"POINT\"","remote_lon <> 0 and remote_lat <> 0");
         vt.addGeometryMetadatata("POINT", Point.class, 4326);
         return vt;
     }
     VirtualTable createRequestsBoxesVirtualTable() {
-        VirtualTable vt = createVirtualTable("requests_box", "ST_SetSRID(ST_MakeBox2D(ST_Point(minx, miny),ST_Point(maxx,maxy)),4326) as \"BOX\"");
+        VirtualTable vt = createVirtualTable("requests_box", "ST_SetSRID(ST_MakeBox2D(ST_MakePoint(minx, miny),ST_MakePoint(maxx,maxy)),4326) as \"BOX\"", "maxx IS NOT NULL AND maxx>=minx AND maxy>=miny");
         vt.addGeometryMetadatata("BOX", Polygon.class, 4326);
         return vt;
     }
