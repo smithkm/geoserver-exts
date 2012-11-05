@@ -63,7 +63,7 @@ public class LocationPanel extends Panel {
         });
         form.add(map);
 
-        form.add(new ExternalLink("kml", "../wms/kml?layers=analytics:requests_agg"));
+        form.add(new ExternalLink("kml", "../wms/kml?layers=analytics:requests"));
         //add(new ExternalLink("pdf", "../wms/reflect?layers=analytics:requests_agg&format=pdf"));
         
         table.setPageable(true);

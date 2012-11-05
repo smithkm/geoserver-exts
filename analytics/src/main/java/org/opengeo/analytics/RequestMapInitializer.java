@@ -214,7 +214,7 @@ public class RequestMapInitializer implements GeoServerInitializer {
                        "response_length as \"RESPONSE_LENGTH\", " +
                        "error_message as \"ERROR_MESSAGE\"" + 
                  " FROM request" +
-                 " WHERE "+query +" AND %query%");
+                 " WHERE ("+query +") AND (%query%)");
         vt.setPrimaryKeyColumns(Arrays.asList("ID"));
         RegexpValidator validator = new RegexpValidator(START_END_REGEXP);
         vt.addParameter(new VirtualTableParameter("query","1=1",validator));
