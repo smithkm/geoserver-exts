@@ -18,15 +18,17 @@
     var osm = new OpenLayers.Layer.OSM();
     var wmsHeat = new OpenLayers.Layer.WMS(
         "Request Origins Heatmap", "../wms",
-        {'layers': 'analytics:requests', 'styles': 'request_origin_heatmap', 'format':'image/png', 'transparent':true, 'viewparams':"query:${query}"},
+        {'layers': 'analytics:requests', 'styles': 'analytics_requests_heat', 'format':'image/png', 'transparent':true, 'viewparams':"query:${query}"},
         {
             'isBaseLayer': false,
             'singleTile': true
         }
     );
+    wmsHeat.setVisibility(false);
+    
     var wms = new OpenLayers.Layer.WMS(
         "Request Origins", "../wms",
-        {'layers': 'analytics:requests', 'styles': 'request_origin_pointstack', 'format':'image/png', 'transparent':true, 'viewparams':"query:${query}"},
+        {'layers': 'analytics:requests', 'styles': 'analytics_requests_stack', 'format':'image/png', 'transparent':true, 'viewparams':"query:${query}"},
         {
             'isBaseLayer': false,
             'singleTile': true
@@ -40,15 +42,26 @@
             'singleTile': true
         }
     );
+    wmsAgg.setVisibility(false);
+    
     var wmsBox = new OpenLayers.Layer.WMS(
         "Request Bounds", "../wms",
-        {'layers': 'analytics:requests_box', 'format':'image/png', 'transparent':true, 'viewparams':"query:${query}"},
+        {'layers': 'analytics:requests_box', 'styles': 'analytics_box_heat','format':'image/png', 'transparent':true, 'viewparams':"query:${query}"},
         {
             'isBaseLayer': false,
             'singleTile': true
         }
     );
+    var wmsBoxNoBlur = new OpenLayers.Layer.WMS(
+        "Request Bounds", "../wms",
+        {'layers': 'analytics:requests_box', 'styles': 'analytics_box_heat_noblur','format':'image/png', 'transparent':true, 'viewparams':"query:${query}"},
+        {
+            'isBaseLayer': false,
+            'singleTile': true
+        }
+    );
+    wmsBoxNoBlur.setVisibility(false);
     
-    map.addLayers([osm, wmsBox, wmsHeat, wmsAgg, wms]);
+    map.addLayers([osm, wmsBox, wmsBoxNoBlur, wmsHeat, wmsAgg, wms]);
     map.zoomToMaxExtent();
     

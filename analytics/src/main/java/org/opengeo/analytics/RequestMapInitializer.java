@@ -4,7 +4,9 @@ import java.io.File;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import org.geoserver.catalog.Catalog;
@@ -16,11 +18,13 @@ import org.geoserver.catalog.NamespaceInfo;
 import org.geoserver.catalog.ProjectionPolicy;
 import org.geoserver.catalog.StyleInfo;
 import org.geoserver.catalog.WorkspaceInfo;
+import org.geoserver.catalog.impl.LayerInfoImpl;
 import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInitializer;
 import org.geoserver.data.util.IOUtils;
 import org.geoserver.monitor.hib.MonitoringDataSource;
 import org.geoserver.platform.GeoServerResourceLoader;
+import org.geoserver.security.decorators.SecuredLayerInfo;
 import org.geotools.data.postgis.PostgisNGDataStoreFactory;
 import org.geotools.data.shapefile.ShapefileDataStoreFactory;
 import org.geotools.geometry.jts.ReferencedEnvelope;
@@ -65,6 +69,10 @@ public class RequestMapInitializer implements GeoServerInitializer {
         
         //set up the styles
         addStyle(cat, "analytics_requests_agg");
+        addStyle(cat, "analytics_requests_stack");
+        addStyle(cat, "analytics_requests_heat");
+        addStyle(cat, "analytics_box_heat");
+        addStyle(cat, "analytics_box_heat_noblur");
         
         //setup data files
         GeoServerResourceLoader rl = cat.getResourceLoader();
@@ -161,7 +169,14 @@ public class RequestMapInitializer implements GeoServerInitializer {
         }
         
         if (cat.getLayers(ft).isEmpty()) {
-            addLayer(cat, ft, "point");
+            LayerInfo layer = addLayer(cat, ft, "point");
+            
+            // Add the alternate styles
+            layer.getStyles().add(cat.getStyleByName("analytics_requests_stack"));
+            layer.getStyles().add(cat.getStyleByName("analytics_requests_heat"));
+            
+            // Save the changes to the catalog
+            cat.save(layer);
         }
         
         ft = cat.getFeatureTypeByDataStore(ds, "requests_box");
@@ -181,7 +196,9 @@ public class RequestMapInitializer implements GeoServerInitializer {
         }
         
         if (cat.getLayers(ft).isEmpty()) {
-            addLayer(cat, ft, "polygon");
+            LayerInfo layer = addLayer(cat, ft, "polygon");
+            layer.getStyles().add(cat.getStyleByName("analytics_box_heat"));
+            layer.getStyles().add(cat.getStyleByName("analytics_box_heat_noblur"));
         }
     }
     
@@ -316,7 +333,7 @@ public class RequestMapInitializer implements GeoServerInitializer {
         return new ReferencedEnvelope(-180, 180,-90, 90, CRS.decode("EPSG:4326"));
     }
     
-    void addLayer(Catalog cat, FeatureTypeInfo ft, String style) {
+    LayerInfo addLayer(Catalog cat, FeatureTypeInfo ft, String style) {
         LayerInfo l = cat.getFactory().createLayer();
         l.setResource(ft);
         l.setType(LayerInfo.Type.VECTOR);
@@ -325,5 +342,6 @@ public class RequestMapInitializer implements GeoServerInitializer {
         l.setAdvertised(false); 
         
         cat.add(l);
+        return cat.getLayerByName(l.prefixedName());
     }
 }
