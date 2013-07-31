@@ -93,6 +93,7 @@
             <param-value>false</param-value>
         </init-param>
         
+        <!-- The name of the Hazelcast instance to use.  This should match that in  -->
         <init-param>
             <param-name>instance-name</param-name>
             <param-value>gscluster</param-value>
