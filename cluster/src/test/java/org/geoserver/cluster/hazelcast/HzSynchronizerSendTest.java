@@ -11,7 +11,6 @@ import org.easymock.IExpectationSetters;
 import org.geoserver.catalog.DataStoreInfo;
 import org.geoserver.catalog.Info;
 import org.geoserver.catalog.LayerInfo;
-import org.geoserver.catalog.StoreInfo;
 import org.geoserver.catalog.WorkspaceInfo;
 import org.geoserver.catalog.event.CatalogListener;
 import org.geoserver.catalog.event.impl.CatalogModifyEventImpl;
@@ -19,9 +18,7 @@ import org.geoserver.catalog.event.impl.CatalogPostModifyEventImpl;
 import org.geoserver.catalog.event.impl.CatalogRemoveEventImpl;
 import org.geoserver.cluster.ConfigChangeEvent;
 import org.geoserver.config.ConfigurationListener;
-import org.geoserver.config.GeoServer;
 import org.geoserver.config.GeoServerInfo;
-import org.geoserver.config.SettingsInfo;
 import org.junit.Test;
 
 /**
@@ -33,7 +30,7 @@ import org.junit.Test;
 public abstract class HzSynchronizerSendTest extends HzSynchronizerTest {
 
     IExpectationSetters<Object> expectEvent(Object source, String name, String workspace, String id, Class<? extends Info> clazz, ConfigChangeEvent.Type type) {
-        topic.publish(configChangeEvent(address, id, name, workspace, clazz, type));
+        topic.publish(configChangeEvent(localAddress, id, name, workspace, clazz, type));
         return expectLastCall();
     }
     
@@ -44,17 +41,15 @@ public abstract class HzSynchronizerSendTest extends HzSynchronizerTest {
         final String layerId = "Layer-TEST";
         final String layerWorkspace = null; // LayerInfo doesn't have a workspace property
         
-        reset(catalog, geoServer);
         {
-            initGeoServer();
             info = createMock(LayerInfo.class);
     
             expect(info.getName()).andStubReturn(layerName);
             expect(info.getId()).andStubReturn(layerId);
             
-            expectEvent(address, layerName, layerWorkspace, layerId, LayerInfo.class, ConfigChangeEvent.Type.MODIFY);
+            expectEvent(localAddress, layerName, layerWorkspace, layerId, LayerInfo.class, ConfigChangeEvent.Type.MODIFY);
         }
-        replay(hz, topic, configWatcher, catalog, geoServer, info);
+        replay(info);
         {
             HzSynchronizer sync = getSynchronizer();
             
@@ -81,7 +76,8 @@ public abstract class HzSynchronizerSendTest extends HzSynchronizerTest {
             }
 
         }
-        verify(hz, topic, configWatcher, info, catalog, geoServer);
+        waitForSync();
+        verify(info);
     }
     
     @Test
@@ -92,9 +88,7 @@ public abstract class HzSynchronizerSendTest extends HzSynchronizerTest {
         final String storeId = "Store-TEST";
         final String storeWorkspace = "Workspace-TEST";
         
-        reset(catalog, geoServer);
         {
-            initGeoServer();
             info = createMock(DataStoreInfo.class);
             wsInfo = createMock(WorkspaceInfo.class);
     
@@ -104,9 +98,9 @@ public abstract class HzSynchronizerSendTest extends HzSynchronizerTest {
             
             expect(wsInfo.getId()).andStubReturn(storeWorkspace);
             
-            expectEvent(address, storeName, storeWorkspace, storeId, DataStoreInfo.class, ConfigChangeEvent.Type.REMOVE);
+            expectEvent(localAddress, storeName, storeWorkspace, storeId, DataStoreInfo.class, ConfigChangeEvent.Type.REMOVE);
         }
-        replay(hz, topic, configWatcher, catalog, geoServer, info, wsInfo);
+        replay(info, wsInfo);
         {
             HzSynchronizer sync = getSynchronizer();
             
@@ -121,7 +115,8 @@ public abstract class HzSynchronizerSendTest extends HzSynchronizerTest {
                 listener.handleRemoveEvent(event);
             }
         }
-        verify(hz, topic, configWatcher, info, catalog, geoServer, wsInfo);
+        waitForSync();
+        verify(info, wsInfo);
     }
     
     @Test
@@ -131,18 +126,17 @@ public abstract class HzSynchronizerSendTest extends HzSynchronizerTest {
         final String globalId = "GeoServer-TEST";
         final String globalWorkspace = null;
         
-        reset(catalog, geoServer);
         {
-            initGeoServer();
             info = createMock(GeoServerInfo.class);
     
             expect(info.getId()).andStubReturn(globalId);
             
-            expectEvent(address, globalName, globalWorkspace, globalId, GeoServerInfo.class, ConfigChangeEvent.Type.MODIFY);
+            expectEvent(localAddress, globalName, globalWorkspace, globalId, GeoServerInfo.class, ConfigChangeEvent.Type.MODIFY);
         }
-        replay(hz, topic, configWatcher, catalog, geoServer, info);
+        replay(info);
         {
             HzSynchronizer sync = getSynchronizer();
+            sync.initialize(configWatcher);
             
             // Mock the result of doing this:
             // GeoServerInfo gsInfo = getGeoServer().getGlobal();;
@@ -156,7 +150,8 @@ public abstract class HzSynchronizerSendTest extends HzSynchronizerTest {
                 listener.handlePostGlobalChange(info);
             }
         }
-        verify(hz, topic, configWatcher, info, catalog, geoServer);
+        waitForSync();
+        verify(info);
     }
 
 }
