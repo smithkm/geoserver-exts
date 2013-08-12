@@ -21,8 +21,8 @@ public class ReloadHzSynchronizer extends HzSynchronizer {
     /** lock during reload */
     protected AtomicBoolean eventLock = new AtomicBoolean();
 
-    public ReloadHzSynchronizer(HazelcastInstance hz, GeoServer gs) {
-        super(hz, gs);
+    public ReloadHzSynchronizer(HzCluster cluster, GeoServer gs) {
+        super(cluster, gs);
     }
     
     @Override

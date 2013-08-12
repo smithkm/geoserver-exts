@@ -1,25 +1,28 @@
 <beans xmlns="http://www.springframework.org/schema/beans"
    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-   xmlns:hz="http://www.hazelcast.com/schema/spring"
    xsi:schemaLocation="http://www.springframework.org/schema/beans
-        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd
-        http://www.hazelcast.com/schema/spring
-        http://www.hazelcast.com/schema/spring/hazelcast-spring-2.3.xsd">
+        http://www.springframework.org/schema/beans/spring-beans-2.5.xsd">
 
     <bean id="hzHomePageContentProvider" 
           class="org.geoserver.cluster.hazelcast.web.HazelcastHomePageContentProvider">
-      <constructor-arg ref="hzInstance"/>
+      <constructor-arg ref="hzCluster"/>
     </bean>
 
    <bean id="hzSynchronizerInitializer" 
-         class="org.geoserver.cluster.hazelcast.HzSynchronizerInitializer"
-         destroy-method="dispose">
+         class="org.geoserver.cluster.hazelcast.HzSynchronizerInitializer">
+      <property name="cluster" ref="hzCluster"/>
+   </bean>
+   <bean id="hzCluster" 
+         class="org.geoserver.cluster.hazelcast.HzCluster">
       <property name="dataDirectory" ref="dataDirectory"/>
    </bean>
-
-    <bean id="hzInstance" class="com.hazelcast.core.HazelcastInstance" 
-          factory-bean="hzSynchronizerInitializer"
-          factory-method="getHzInstance">
-    </bean>
     
+   <bean id="hzSessionFilter" 
+         class="org.geoserver.cluster.hazelcast.web.HzSessionShareFilter">
+      <property name="cluster" ref="hzCluster"/>
+   </bean>
+   <bean id="hzSessionListener" 
+         class="org.geoserver.cluster.hazelcast.web.HzSessionShareListener">
+      <property name="cluster" ref="hzCluster"/>
+   </bean>
 </beans>

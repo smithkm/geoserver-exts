@@ -37,8 +37,8 @@ import com.hazelcast.core.HazelcastInstance;
  */
 public class EventHzSynchronizer extends HzSynchronizer {
 
-    public EventHzSynchronizer(HazelcastInstance hz, GeoServer gs) {
-        super(hz, gs);
+    public EventHzSynchronizer(HzCluster cluster, GeoServer gs) {
+        super(cluster, gs);
     }
 
     @Override
