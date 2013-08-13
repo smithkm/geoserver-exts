@@ -9,8 +9,6 @@ import org.apache.wicket.model.Model;
 import org.geoserver.web.wicket.GeoServerDialog;
 import org.geoserver.web.wicket.SimpleAjaxLink;
 
-import com.hazelcast.core.HazelcastInstance;
-
 import org.geoserver.cluster.hazelcast.HzCluster;
 
 public class NodeLinkPanel extends Panel {

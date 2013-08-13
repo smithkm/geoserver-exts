@@ -7,8 +7,6 @@ import java.util.logging.Level;
 import org.geoserver.cluster.Event;
 import org.geoserver.config.GeoServer;
 
-import com.hazelcast.core.HazelcastInstance;
-
 /**
  * Synchronizer that does a full geoserver reload on any event.
  * <p>

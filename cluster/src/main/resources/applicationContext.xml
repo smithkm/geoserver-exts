@@ -16,13 +16,5 @@
          class="org.geoserver.cluster.hazelcast.HzCluster">
       <property name="dataDirectory" ref="dataDirectory"/>
    </bean>
-    
-   <bean id="hzSessionFilter" 
-         class="org.geoserver.cluster.hazelcast.web.HzSessionShareFilter">
-      <property name="cluster" ref="hzCluster"/>
-   </bean>
-   <bean id="hzSessionListener" 
-         class="org.geoserver.cluster.hazelcast.web.HzSessionShareListener">
-      <property name="cluster" ref="hzCluster"/>
-   </bean>
+
 </beans>

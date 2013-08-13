@@ -8,7 +8,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -30,7 +29,6 @@ import org.geoserver.config.SettingsInfo;
 import org.geoserver.ows.util.OwsUtils;
 import org.geotools.util.logging.Logging;
 
-import com.hazelcast.core.HazelcastInstance;
 import com.hazelcast.core.ITopic;
 import com.hazelcast.core.Message;
 import com.hazelcast.core.MessageListener;
@@ -142,7 +140,7 @@ public abstract class HzSynchronizer extends GeoServerSynchronizer implements Me
      */
     protected abstract void processEventQueue(Queue<Event> q) throws Exception;
 
-    ConfigChangeEvent newChangeEvent(CatalogEvent evt, Type type) {
+    ConfigChangeEvent<?> newChangeEvent(CatalogEvent evt, Type type) {
         return newChangeEvent(evt.getSource(), type);
     }
 

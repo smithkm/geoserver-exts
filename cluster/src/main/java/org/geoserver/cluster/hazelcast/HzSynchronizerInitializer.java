@@ -1,7 +1,5 @@
 package org.geoserver.cluster.hazelcast;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.logging.Logger;
 
 import org.geoserver.cluster.ClusterConfig;
@@ -28,15 +26,16 @@ public class HzSynchronizerInitializer implements GeoServerInitializer {
     
     @Override
     public void initialize(GeoServer geoServer) throws Exception {
-        ClusterConfigWatcher configWatcher = loadConfig();
+        ClusterConfigWatcher configWatcher = cluster.getConfigWatcher();
         ClusterConfig config = configWatcher.get();
         
         
-        if (!cluster.isEnabled()) {
+        if (!config.isEnabled()) {
             LOGGER.info("Hazelcast synchronization disabled");
             return;
         }
         
+        @SuppressWarnings("unused")
         HazelcastInstance hz = cluster.getHz();
         
         HzSynchronizer syncher = null;
@@ -54,10 +53,6 @@ public class HzSynchronizerInitializer implements GeoServerInitializer {
         LOGGER.info("Hazelcast synchronizer method is " + method);
     }
     
-    ClusterConfigWatcher loadConfig() throws IOException {
-        File f = cluster.getConfigFile(HzCluster.CONFIG_FILENAME, HzCluster.class);
-        
-        return new ClusterConfigWatcher(f);
-    }
+
 
 }

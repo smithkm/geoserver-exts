@@ -5,11 +5,7 @@ import org.apache.wicket.markup.html.WebMarkupContainer;
 import org.geoserver.cluster.hazelcast.HzCluster;
 import org.geoserver.platform.GeoServerExtensions;
 import org.geoserver.security.GeoServerSecurityManager;
-import org.geoserver.web.AdminComponentAuthorizer;
 import org.geoserver.web.GeoServerHomePageContentProvider;
-import org.springframework.security.core.context.SecurityContextHolder;
-
-import com.hazelcast.core.HazelcastInstance;
 
 public class HazelcastHomePageContentProvider implements GeoServerHomePageContentProvider {
 
