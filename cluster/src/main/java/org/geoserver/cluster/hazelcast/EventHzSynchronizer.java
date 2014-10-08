@@ -15,6 +15,8 @@ import java.util.logging.Level;
 
 import org.geoserver.catalog.Catalog;
 import org.geoserver.catalog.CatalogInfo;
+import org.geoserver.catalog.DataStoreInfo;
+import org.geoserver.catalog.FeatureTypeInfo;
 import org.geoserver.catalog.Info;
 import org.geoserver.catalog.LayerGroupInfo;
 import org.geoserver.catalog.LayerInfo;
@@ -166,17 +168,17 @@ public class EventHzSynchronizer extends HzSynchronizer {
         }
     }
 
-    private void processCatalogEvent(final ConfigChangeEvent event) throws NoSuchMethodException,
+    private void processCatalogEvent(final ConfigChangeEvent clusterEvent) throws NoSuchMethodException,
             SecurityException {
 
-        Class<? extends Info> clazz = event.getObjectInterface();
-        Type t = event.getChangeType();
-        String id = event.getObjectId();
-        String name = event.getObjectName();
+        Class<? extends Info> clazz = clusterEvent.getObjectInterface();
+        Type t = clusterEvent.getChangeType();
+        String id = clusterEvent.getObjectId();
+        String name = clusterEvent.getObjectName();
         // catalog event
         CatalogInfo subj;
         Method notifyMethod;
-        CatalogEventImpl evt;
+        CatalogEventImpl localEvent;
 
         final Catalog cat = cluster.getRawCatalog();
 
@@ -184,20 +186,35 @@ public class EventHzSynchronizer extends HzSynchronizer {
         case ADD:
             subj = getCatalogInfo(cat, id, clazz);
             notifyMethod = CatalogListener.class.getMethod("handleAddEvent", CatalogAddEvent.class);
-            evt = new CatalogAddEventImpl();
+            localEvent = new CatalogAddEventImpl();
             break;
         case MODIFY:
             subj = getCatalogInfo(cat, id, clazz);
             notifyMethod = CatalogListener.class.getMethod("handlePostModifyEvent",
                     CatalogPostModifyEvent.class);
-            evt = new CatalogPostModifyEventImpl();
+            localEvent = new CatalogPostModifyEventImpl();
             break;
         case REMOVE:
             notifyMethod = CatalogListener.class.getMethod("handleRemoveEvent",
                     CatalogRemoveEvent.class);
-            evt = new CatalogRemoveEventImpl();
-            subj = (CatalogInfo) Proxy.newProxyInstance(getClass().getClassLoader(),
-                    new Class[] { clazz }, new RemovedObjectProxy(id, name, clazz));
+            localEvent = new CatalogRemoveEventImpl();
+            RemovedObjectProxy proxy = new RemovedObjectProxy(id, name, clazz);
+            
+            if(ResourceInfo.class.isAssignableFrom(clazz) && clusterEvent.getStoreId()!=null) {
+            	StoreInfo storeInfo = null;
+            	if(cat.getResourcePool().getDataStoreCache().containsKey(clusterEvent.getStoreId())){
+            		storeInfo = cat.getStore(clusterEvent.getStoreId(), StoreInfo.class);
+            	}
+            	if(storeInfo==null) {
+            		@SuppressWarnings("unchecked")
+					Class<? extends StoreInfo> storeClazz = storeForResourceClass((Class<? extends ResourceInfo>) clazz);
+					RemovedObjectProxy dsProxy = new RemovedObjectProxy(clusterEvent.getStoreId(), "PROXY-STORE", storeClazz);
+            		storeInfo = (StoreInfo) Proxy.newProxyInstance(getClass().getClassLoader(), new Class[] { storeClazz }, dsProxy);
+            	}
+            	proxy.addCatalogCollaborator("store", storeInfo);
+            }
+			subj = (CatalogInfo) Proxy.newProxyInstance(getClass().getClassLoader(),
+                    new Class[] { clazz }, proxy);
             break;
         default:
             throw new IllegalStateException("Should not happen");
@@ -206,34 +223,47 @@ public class EventHzSynchronizer extends HzSynchronizer {
         if (subj == null) {// can't happen if type == DELETE
             ConfigChangeEvent removeEvent = new ConfigChangeEvent(id, name, clazz, Type.REMOVE);
             if (queue.contains(removeEvent)) {
-                LOGGER.fine(format("%s - Ignoring event %s, a remove is queued.", nodeId(), event));
+                LOGGER.fine(format("%s - Ignoring event %s, a remove is queued.", nodeId(), clusterEvent));
                 return;
             }
 
             if (subj == null) {
                 String message = format(
                         "%s - Error processing event %s: object not found in catalog", nodeId(),
-                        event);
+                        clusterEvent);
                 LOGGER.warning(message);
                 return;
             }
         }
 
-        evt.setSource(subj);
-        try {
-            for (CatalogListener l : ImmutableList.copyOf(cat.getListeners())) {
-                // Don't notify self otherwise the event bounces back out into the
-                // cluster.
-                if (l != this && isStarted()) {
-                    notifyMethod.invoke(l, evt);
+        localEvent.setSource(subj);
+
+        for (CatalogListener listener : ImmutableList.copyOf(cat.getListeners())) {
+            // Don't notify self otherwise the event bounces back out into the
+            // cluster.
+            if (listener != this && isStarted()) {
+                try {
+                	notifyMethod.invoke(listener, localEvent);
+                } catch (Exception ex) {
+                    LOGGER.log(Level.WARNING, format("%s - Event dispatch failed: %s", nodeId(), clusterEvent), ex);
                 }
             }
-        } catch (Exception ex) {
-            LOGGER.log(Level.WARNING, format("%s - Event dispatch failed: %s", nodeId(), event), ex);
         }
 
     }
 
+    static Class<? extends StoreInfo> storeForResourceClass(Class<? extends ResourceInfo> clazz) {
+    	if(org.geoserver.catalog.FeatureTypeInfo.class.isAssignableFrom(clazz)) {
+    		return org.geoserver.catalog.DataStoreInfo.class;
+    	} else if (org.geoserver.catalog.CoverageInfo.class.isAssignableFrom(clazz)){
+    		return org.geoserver.catalog.CoverageStoreInfo.class;
+    	} else if (org.geoserver.catalog.WMSLayerInfo.class.isAssignableFrom(clazz)){
+    		return org.geoserver.catalog.WMSStoreInfo.class;
+    	} else {
+    		throw new UnsupportedOperationException("Unkown Resource type "+clazz);
+    	}
+    }
+    
     private void processGeoServerConfigEvent(ConfigChangeEvent ce) throws NoSuchMethodException,
             SecurityException {
 
