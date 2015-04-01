@@ -3,6 +3,8 @@ package org.geotools.ysld.transform.sld;
 import org.geotools.ysld.YamlMap;
 import org.geotools.ysld.Ysld;
 import org.geotools.ysld.YsldTests;
+import org.hamcrest.Matchers;
+import org.junit.Assert;
 import org.junit.Test;
 import org.yaml.snakeyaml.Yaml;
 
@@ -11,7 +13,9 @@ import javax.xml.stream.XMLStreamReader;
 
 import java.io.StringWriter;
 
+import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThat;
 
 public class SldTransformerTest {
 
@@ -1692,6 +1696,7 @@ public class SldTransformerTest {
         assertEquals("(#008000,,70,)", raster.map("color-map").seq("entries").str(0));
         assertEquals("(#663333,,256,)", raster.map("color-map").seq("entries").str(1));
     }
+    
 
     SldTransformer transformer(String dirname, String filename) throws Exception {
         StringWriter yaml = new StringWriter();
